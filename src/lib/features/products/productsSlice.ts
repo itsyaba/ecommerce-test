@@ -38,10 +38,19 @@ export type Product = {
   thumbnail: string;
 };
 
+export type ProductFilters = {
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  categories?: string[];
+  brands?: string[];
+};
+
 type FetchProductsArgs = {
   skip: number;
   limit?: number;
   searchTerm?: string;
+  filters?: ProductFilters;
 };
 
 type FetchProductsResponse = {
@@ -82,6 +91,7 @@ export const fetchProducts = createAsyncThunk<
 
 type ProductsState = {
   items: Product[];
+  filteredItems: Product[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error?: string | null;
   hasMore: boolean;
@@ -89,10 +99,12 @@ type ProductsState = {
   limit: number;
   searchTerm: string;
   isLoadingMore: boolean;
+  filters: ProductFilters;
 };
 
 const initialState: ProductsState = {
   items: [],
+  filteredItems: [],
   status: "idle",
   error: null,
   hasMore: true,
@@ -100,6 +112,41 @@ const initialState: ProductsState = {
   limit: 10,
   searchTerm: "",
   isLoadingMore: false,
+  filters: {},
+};
+
+// Helper function to apply filters
+const applyFilters = (products: Product[], filters: ProductFilters): Product[] => {
+  return products.filter((product) => {
+    // Price filter
+    if (filters.minPrice !== undefined && product.price < filters.minPrice) {
+      return false;
+    }
+    if (filters.maxPrice !== undefined && product.price > filters.maxPrice) {
+      return false;
+    }
+
+    // Rating filter
+    if (filters.minRating !== undefined && product.rating < filters.minRating) {
+      return false;
+    }
+
+    // Category filter
+    if (filters.categories && filters.categories.length > 0) {
+      if (!filters.categories.includes(product.category)) {
+        return false;
+      }
+    }
+
+    // Brand filter
+    if (filters.brands && filters.brands.length > 0) {
+      if (!filters.brands.includes(product.brand)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 };
 
 const productsSlice = createSlice({
@@ -108,6 +155,7 @@ const productsSlice = createSlice({
   reducers: {
     resetProducts(state) {
       state.items = [];
+      state.filteredItems = [];
       state.skip = 0;
       state.hasMore = true;
       state.status = "idle";
@@ -115,6 +163,14 @@ const productsSlice = createSlice({
     },
     setSearchTerm(state, action: PayloadAction<string>) {
       state.searchTerm = action.payload;
+    },
+    setFilters(state, action: PayloadAction<ProductFilters>) {
+      state.filters = action.payload;
+      state.filteredItems = applyFilters(state.items, action.payload);
+    },
+    clearFilters(state) {
+      state.filters = {};
+      state.filteredItems = state.items;
     },
   },
   extraReducers: (builder) => {
@@ -140,9 +196,12 @@ const productsSlice = createSlice({
 
         if (skip === 0) {
           state.items = action.payload.products;
+          state.filteredItems = applyFilters(action.payload.products, state.filters);
           state.status = "succeeded";
         } else {
-          state.items = [...state.items, ...action.payload.products];
+          const newItems = [...state.items, ...action.payload.products];
+          state.items = newItems;
+          state.filteredItems = applyFilters(newItems, state.filters);
         }
 
         state.isLoadingMore = false;
@@ -166,7 +225,7 @@ const productsSlice = createSlice({
   },
 });
 
-export const { resetProducts, setSearchTerm } = productsSlice.actions;
+export const { resetProducts, setSearchTerm, setFilters, clearFilters } = productsSlice.actions;
 
 export default productsSlice.reducer;
 
