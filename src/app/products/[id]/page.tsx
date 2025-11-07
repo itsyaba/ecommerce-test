@@ -11,7 +11,6 @@ import {
   Plus,
   ThumbsUp,
   ThumbsDown,
-  Share2,
   Facebook,
   Twitter,
   Instagram,
@@ -42,7 +41,6 @@ const AVAILABLE_COLORS = [
   { name: "Beige", value: "#F5F5DC", hex: "bg-[#F5F5DC]" },
   { name: "Black", value: "#000000", hex: "bg-[#000000]" },
 ];
-
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -116,7 +114,9 @@ export default function ProductDetailPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <Card className="p-12 text-center">
           <h2 className="text-2xl font-semibold">Product Not Found</h2>
-          <p className="mt-2 text-muted-foreground">{error || "The product you're looking for doesn't exist."}</p>
+          <p className="mt-2 text-muted-foreground">
+            {error || "The product you're looking for doesn't exist."}
+          </p>
           <Link href="/">
             <Button className="mt-6">Back to Home</Button>
           </Link>
@@ -185,7 +185,12 @@ export default function ProductDetailPage() {
                       : "border-border hover:border-primary/50"
                   )}
                 >
-                  <Image src={image} alt={`${product.title} ${index + 1}`} fill className="object-cover" />
+                  <Image
+                    src={image}
+                    alt={`${product.title} ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -271,7 +276,9 @@ export default function ProductDetailPage() {
               <Input
                 type="number"
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Math.min(Number(e.target.value), product.stock)))}
+                onChange={(e) =>
+                  setQuantity(Math.max(1, Math.min(Number(e.target.value), product.stock)))
+                }
                 className="h-10 w-20 text-center"
                 min={1}
                 max={product.stock}
@@ -314,16 +321,56 @@ export default function ProductDetailPage() {
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">Share:</span>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() =>
+                  window.open(
+                    `https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`,
+                    "_blank"
+                  )
+                }
+              >
                 <Facebook className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() =>
+                  window.open(
+                    `https://twitter.com/intent/tweet?url=${window.location.href}`,
+                    "_blank"
+                  )
+                }
+              >
                 <Twitter className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() =>
+                  window.open(
+                    `https://www.instagram.com/sharer/sharer.php?u=${window.location.href}`,
+                    "_blank"
+                  )
+                }
+              >
                 <Instagram className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() =>
+                  window.open(
+                    `https://www.linkedin.com/sharer/sharer.php?u=${window.location.href}`,
+                    "_blank"
+                  )
+                }
+              >
                 <LinkIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -371,13 +418,18 @@ export default function ProductDetailPage() {
                   <div className="flex flex-col gap-1 border-b border-border pb-3 sm:flex-row sm:justify-between">
                     <span className="text-sm font-medium text-muted-foreground">Dimensions</span>
                     <span className="text-sm font-semibold">
-                      {product.dimensions.width} × {product.dimensions.height} × {product.dimensions.depth} cm
+                      {product.dimensions.width} × {product.dimensions.height} ×{" "}
+                      {product.dimensions.depth} cm
                     </span>
                   </div>
                   {product.minimumOrderQuantity && (
                     <div className="flex flex-col gap-1 border-b border-border pb-3 sm:flex-row sm:justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">Minimum Order</span>
-                      <span className="text-sm font-semibold">{product.minimumOrderQuantity} units</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Minimum Order
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {product.minimumOrderQuantity} units
+                      </span>
                     </div>
                   )}
                   {product.stock !== undefined && (
@@ -390,7 +442,9 @@ export default function ProductDetailPage() {
               </Card>
 
               {/* Shipping & Policies */}
-              {(product.warrantyInformation || product.shippingInformation || product.returnPolicy) && (
+              {(product.warrantyInformation ||
+                product.shippingInformation ||
+                product.returnPolicy) && (
                 <Card className="p-6">
                   <h3 className="mb-4 text-lg font-semibold">Shipping & Policies</h3>
                   <div className="space-y-4">
@@ -408,7 +462,9 @@ export default function ProductDetailPage() {
                     )}
                     {product.returnPolicy && (
                       <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">Return Policy</span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Return Policy
+                        </span>
                         <span className="text-sm font-semibold">{product.returnPolicy}</span>
                       </div>
                     )}
@@ -498,7 +554,9 @@ export default function ProductDetailPage() {
                     ))
                   ) : (
                     <Card className="p-6 text-center">
-                      <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
+                      <p className="text-muted-foreground">
+                        No reviews yet. Be the first to review!
+                      </p>
                     </Card>
                   )}
                 </div>
