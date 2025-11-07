@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, Heart } from "lucide-react";
 import { useState, FormEvent } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAppSelector } from "@/hooks/use-redux";
 
 export function Navbar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const favorites = useAppSelector((state) => state.favorites.items);
+  const favoritesCount = Object.keys(favorites).length;
 
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,6 +53,17 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/favorites">
+            <Button variant="ghost" size="icon" className="relative rounded-full">
+              <Heart className="h-5 w-5" />
+              {favoritesCount > 0 && (
+                <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs">
+                  {favoritesCount > 99 ? "99+" : favoritesCount}
+                </Badge>
+              )}
+              <span className="sr-only">Favorites</span>
+            </Button>
+          </Link>
           <ModeToggle />
           {/* {session?.user ? ( */}
           {/* <>
@@ -103,6 +118,17 @@ export function Navbar() {
                 </div>
               </form>
               <div className="flex flex-col gap-3">
+                <Link href="/favorites">
+                  <Button variant="outline" className="w-full rounded-full" size="lg">
+                    <Heart className="mr-2 h-4 w-4" />
+                    My Favorites
+                    {favoritesCount > 0 && (
+                      <Badge className="ml-2 h-5 min-w-[1.25rem] rounded-full px-1.5 text-xs">
+                        {favoritesCount > 99 ? "99+" : favoritesCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
                 {/* {session?.user ? ( */}
                 <>
                   <Link href="/dashboard">

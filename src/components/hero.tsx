@@ -55,8 +55,8 @@ export default function HeroSection() {
               variant="secondary"
               className="h-12 rounded-full px-7 text-base"
             >
-              <Link href="/about">
-                Explore Collection
+              <Link href="/favorites">
+                Explore Favorites
                 <ArrowUpRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

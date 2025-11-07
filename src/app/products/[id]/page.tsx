@@ -297,17 +297,14 @@ export default function ProductDetailPage() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="flex-1" disabled={product.stock === 0}>
-              {product.stock > 0 ? "BUY IT NOW" : "Out of Stock"}
-            </Button>
             <Button
               size="lg"
-              variant="outline"
               className="flex-1"
+              variant={isFavorite ? "destructive" : "default"}
               disabled={product.stock === 0}
               onClick={handleToggleFavorite}
             >
-              {isFavorite ? "Remove from Favorites" : "Add to Cart"}
+              {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
             </Button>
           </div>
 
