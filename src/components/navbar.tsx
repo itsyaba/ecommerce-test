@@ -28,7 +28,6 @@ export function Navbar() {
   const favoritesCount = Object.keys(favorites).length;
 
   useEffect(() => {
-    // Check if user is logged in
     const checkAuth = () => {
       if (typeof window !== "undefined") {
         const userData = localStorage.getItem("user");
@@ -46,9 +45,7 @@ export function Navbar() {
     };
 
     checkAuth();
-    // Listen for storage changes (e.g., when user logs in/out in another tab)
     window.addEventListener("storage", checkAuth);
-    // Listen for custom auth events
     const handleAuthChange = () => checkAuth();
     window.addEventListener("auth-change", handleAuthChange);
 
@@ -63,7 +60,6 @@ export function Navbar() {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     setUser(null);
-    // Dispatch custom event to notify other components
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("auth-change"));
     }
@@ -151,7 +147,7 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <Link href="/login">
-              <Button size="sm" variant="ghost" className="hidden rounded-full sm:inline-flex">
+              <Button size="lg" variant="default" className="hidden rounded-sm sm:inline-flex">
                 Log in
               </Button>
             </Link>

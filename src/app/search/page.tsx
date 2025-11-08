@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
@@ -13,7 +13,10 @@ import { ProductFilters } from "@/components/product-filters";
 
 const LIMIT = 10;
 
-export default function SearchPage() {
+// Force dynamic rendering to prevent build errors with useSearchParams
+export const dynamic = "force-dynamic";
+
+function SearchContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { items, filteredItems, status, hasMore, skip, isLoadingMore, searchTerm, error, filters } =
@@ -167,5 +170,42 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mb-10 flex flex-col gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Search Products
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Find the perfect furniture piece for your home.
+              </p>
+            </div>
+            <div className="relative w-full max-w-2xl">
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search products..."
+                className="h-12 rounded-full border-border pl-11 text-base"
+                disabled
+              />
+            </div>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ProductCardSkeleton key={`skeleton-${index}`} />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <SearchContent />
+    </Suspense>
   );
 }

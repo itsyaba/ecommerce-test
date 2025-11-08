@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -49,9 +50,6 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // Note: DummyJSON doesn't have a signup endpoint, so we'll use the login endpoint
-      // In a real app, you'd have a proper signup endpoint
-      // For now, we'll try to create a user via the /users/add endpoint
       const response = await fetch("https://dummyjson.com/users/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,7 +68,6 @@ export default function SignupPage() {
 
       const userData = await response.json();
 
-      // Automatically log in after signup
       const credentials: LoginCredentials = {
         username: formData.username || formData.email.split("@")[0],
         password: formData.password,
@@ -93,7 +90,8 @@ export default function SignupPage() {
       router.push("/");
       router.refresh();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || "Signup failed. Please try again.";
+      const errorMessage =
+        error.response?.data?.message || error.message || "Signup failed. Please try again.";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -107,7 +105,10 @@ export default function SignupPage() {
         <div className="absolute -left-1/4 -top-1/4 h-96 w-96 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-900/20" />
         <div className="absolute -right-1/4 -bottom-1/4 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20" />
         {/* Subtle arcing lines pattern */}
-        <svg className="absolute inset-0 h-full w-full opacity-20 dark:opacity-10" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          className="absolute inset-0 h-full w-full opacity-20 dark:opacity-10"
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <path
             d="M0,200 Q400,100 800,200 T1600,200"
             stroke="#0ea5e9"
@@ -231,11 +232,7 @@ export default function SignupPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
 
@@ -258,11 +255,7 @@ export default function SignupPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
               >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
+                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
 
@@ -352,4 +345,3 @@ export default function SignupPage() {
     </div>
   );
 }
-

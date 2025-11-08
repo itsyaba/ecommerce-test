@@ -2,14 +2,13 @@
 import axios from "axios";
 import type { Product } from "@/lib/features/products/productsSlice";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 export const api = axios.create({
-  baseURL: "https://dummyjson.com",
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 10000,
-  // Note: withCredentials removed due to CORS limitations with DummyJSON
-  // Tokens are stored in localStorage instead
 });
 
 export type ApiError = {

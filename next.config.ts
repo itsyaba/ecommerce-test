@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Suppress build warnings for pages using useSearchParams
+  // The Suspense boundary fix in the component handles this properly
+  typescript: {
+    ignoreBuildErrors: false,
+  },
 };
 
 export default nextConfig;

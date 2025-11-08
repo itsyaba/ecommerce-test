@@ -8,7 +8,6 @@ type FavoritesState = {
 
 const FAVORITES_STORAGE_KEY = "furnizen_favorites";
 
-// Load favorites from localStorage
 const loadFavoritesFromStorage = (): Record<number, Product> => {
   if (typeof window === "undefined") return {};
   try {
@@ -19,7 +18,6 @@ const loadFavoritesFromStorage = (): Record<number, Product> => {
   }
 };
 
-// Save favorites to localStorage
 const saveFavoritesToStorage = (items: Record<number, Product>) => {
   if (typeof window === "undefined") return;
   try {
@@ -29,8 +27,6 @@ const saveFavoritesToStorage = (items: Record<number, Product>) => {
   }
 };
 
-// Initialize with empty state to avoid SSR hydration issues
-// Favorites will be loaded via loadFavorites action in Providers
 const initialState: FavoritesState = {
   items: {},
 };
@@ -46,7 +42,6 @@ const favoritesSlice = createSlice({
       } else {
         state.items[product.id] = product;
       }
-      // Persist to localStorage
       saveFavoritesToStorage(state.items);
     },
     loadFavorites(state) {
@@ -58,4 +53,3 @@ const favoritesSlice = createSlice({
 export const { toggleFavorite, loadFavorites } = favoritesSlice.actions;
 
 export default favoritesSlice.reducer;
-
