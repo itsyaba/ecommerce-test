@@ -18,9 +18,81 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://test-project.yeab.works";
+
 export const metadata: Metadata = {
-  title: "Furnizen",
-  description: "Furnizen is a platform for buying and selling furniture",
+  title: {
+    default: "Furnizen - Your Comfort Zone Begins Here",
+    template: "%s | Furnizen",
+  },
+  description:
+    "Discover the perfect blend of quality, comfort, and modern design. Furnizen hand-selects signature pieces that refresh every room and reflect your unique taste. Shop authentic craftsmanship, personalized styling, and sustainable materials.",
+  keywords: [
+    "furniture",
+    "home decor",
+    "modern furniture",
+    "furniture store",
+    "sustainable furniture",
+    "artisan furniture",
+    "interior design",
+    "home furnishings",
+    "furniture shopping",
+    "design furniture",
+  ],
+  authors: [{ name: "Furnizen" }],
+  creator: "Furnizen",
+  publisher: "Furnizen",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "Furnizen",
+    title: "Furnizen - Your Comfort Zone Begins Here",
+    description:
+      "Discover the perfect blend of quality, comfort, and modern design. Furnizen hand-selects signature pieces that refresh every room and reflect your unique taste.",
+    images: [
+      {
+        url: "/hero-light.png",
+        width: 1200,
+        height: 630,
+        alt: "Furnizen - Modern Furniture Store",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Furnizen - Your Comfort Zone Begins Here",
+    description:
+      "Discover the perfect blend of quality, comfort, and modern design. Furnizen hand-selects signature pieces that refresh every room.",
+    images: ["/hero-light.png"],
+    creator: "@furnizen",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    // Add your verification codes here when available
+    // google: "your-google-verification-code",
+    // yandex: "your-yandex-verification-code",
+    // bing: "your-bing-verification-code",
+  },
 };
 
 export default function RootLayout({
