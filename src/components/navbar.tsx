@@ -1,22 +1,75 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Search, Heart } from "lucide-react";
-import { useState, FormEvent } from "react";
+import { Menu, Search, Heart, LogOut, Plus, User } from "lucide-react";
+import { useState, FormEvent, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useAppSelector } from "@/hooks/use-redux";
 
 export function Navbar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [user, setUser] = useState<any>(null);
   const favorites = useAppSelector((state) => state.favorites.items);
   const favoritesCount = Object.keys(favorites).length;
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkAuth = () => {
+      if (typeof window !== "undefined") {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          try {
+            setUser(JSON.parse(userData));
+          } catch (e) {
+            console.error(e);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    checkAuth();
+    // Listen for storage changes (e.g., when user logs in/out in another tab)
+    window.addEventListener("storage", checkAuth);
+    // Listen for custom auth events
+    const handleAuthChange = () => checkAuth();
+    window.addEventListener("auth-change", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    setUser(null);
+    // Dispatch custom event to notify other components
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-change"));
+    }
+    router.push("/");
+    router.refresh();
+  };
 
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -54,8 +107,8 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link href="/favorites">
-            <Button variant="ghost" size="icon" className="relative rounded-full">
-              <Heart className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative rounded-full mr-3">
+              <Heart className="h-5 w-5 text-foreground hover:fill-primary hover:text-primary" />
               {favoritesCount > 0 && (
                 <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs">
                   {favoritesCount > 99 ? "99+" : favoritesCount}
@@ -65,33 +118,44 @@ export function Navbar() {
             </Button>
           </Link>
           <ModeToggle />
-          {/* {session?.user ? ( */}
-          {/* <>
-            <Link href="/dashboard">
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden items-center gap-2 rounded-full sm:flex"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
-              </Button>
-            </Link>
-          </> */}
-          {/* ) : ( */}
-          <>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="hidden rounded-full sm:flex">
+                  <User className="h-4 w-4 text-foreground hover:fill-primary hover:text-primary" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/products/create" className="flex items-center gap-2 cursor-pointer">
+                    <Plus className="h-4 w-4" />
+                    Create a new product
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <Link href="/login">
               <Button size="sm" variant="ghost" className="hidden rounded-full sm:inline-flex">
                 Log in
               </Button>
             </Link>
-            <Link href="/signup">
-              <Button size="sm" className="hidden rounded-full sm:inline-flex">
-                Sign up
-              </Button>
-            </Link>
-          </>
-          {/* )} */}
+          )}
 
           <Sheet>
             <SheetTrigger asChild>
@@ -120,7 +184,7 @@ export function Navbar() {
               <div className="flex flex-col gap-3">
                 <Link href="/favorites">
                   <Button variant="outline" className="w-full rounded-full" size="lg">
-                    <Heart className="mr-2 h-4 w-4" />
+                    <Heart className="mr-2 h-4 w-4 hover:fill-primary hover:text-primary" />
                     My Favorites
                     {favoritesCount > 0 && (
                       <Badge className="ml-2 h-5 min-w-[1.25rem] rounded-full px-1.5 text-xs">
@@ -129,28 +193,31 @@ export function Navbar() {
                     )}
                   </Button>
                 </Link>
-                {/* {session?.user ? ( */}
-                <>
-                  <Link href="/dashboard">
-                    <Button className="w-full rounded-full" size="lg">
-                      Go to Dashboard
+                {user ? (
+                  <>
+                    <Link href="/products/create">
+                      <Button className="w-full rounded-full" size="lg">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create a new product
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full"
+                      size="lg"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
                     </Button>
-                  </Link>
-                </>
-                {/* ) : ( */}
-                <>
+                  </>
+                ) : (
                   <Link href="/login">
                     <Button variant="outline" className="w-full rounded-full" size="lg">
                       Log in
                     </Button>
                   </Link>
-                  <Link href="/signup">
-                    <Button className="w-full rounded-full" size="lg">
-                      Create Account
-                    </Button>
-                  </Link>
-                </>
-                {/* )} */}
+                )}
               </div>
             </SheetContent>
           </Sheet>
@@ -159,4 +226,3 @@ export function Navbar() {
     </header>
   );
 }
-

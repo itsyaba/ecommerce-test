@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Star,
   ChevronRight,
@@ -15,7 +15,10 @@ import {
   Twitter,
   Instagram,
   Link as LinkIcon,
+  Edit,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,14 +32,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toggleFavorite } from "@/lib/features/favorites/favoritesSlice";
-import { fetchProductById } from "@/lib/api";
+import { fetchProductById, deleteProduct } from "@/lib/api";
 import type { Product } from "@/lib/features/products/productsSlice";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 
-// Mock colors and sizes - in real app, these would come from the product data
 const AVAILABLE_COLORS = [
   { name: "Beige", value: "#F5F5DC", hex: "bg-[#F5F5DC]" },
   { name: "Black", value: "#000000", hex: "bg-[#000000]" },
@@ -44,6 +56,7 @@ const AVAILABLE_COLORS = [
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = Number(params.id);
   const dispatch = useAppDispatch();
   const favorites = useAppSelector((state) => state.favorites.items);
@@ -56,6 +69,8 @@ export default function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState(AVAILABLE_COLORS[0].value);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("reviews");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -84,6 +99,27 @@ export default function ProductDetailPage() {
 
   const handleQuantityChange = (delta: number) => {
     setQuantity((prev) => Math.max(1, Math.min(prev + delta, product?.stock || 1)));
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteProduct(productId);
+      toast.success("Product deleted successfully! (Note: This is a demo - product is not actually deleted)");
+      setShowDeleteDialog(false);
+      // Redirect to home after a short delay
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 1500);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to delete product. Please try again.";
+      toast.error(errorMessage);
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -129,7 +165,6 @@ export default function ProductDetailPage() {
   const images = product.images && product.images.length > 0 ? product.images : [product.thumbnail];
   const totalReviews = product.reviews?.length || 0;
 
-  // Generate breadcrumbs
   const breadcrumbs = [
     { label: "Home", href: "/" },
     { label: product.category, href: `#${product.category}` },
@@ -305,6 +340,21 @@ export default function ProductDetailPage() {
               onClick={handleToggleFavorite}
             >
               {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            </Button>
+            <Link href={`/products/${productId}/edit`}>
+              <Button size="lg" variant="outline" className="flex-1 sm:flex-initial">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+            <Button
+              size="lg"
+              variant="destructive"
+              className="flex-1 sm:flex-initial"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
             </Button>
           </div>
 
@@ -605,6 +655,32 @@ export default function ProductDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will delete the product "{product?.title}".
+              <br />
+              <span className="mt-2 block text-xs text-muted-foreground">
+                Note: This is a demo - the product will not actually be deleted.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -64,7 +64,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <p className="text-sm text-white/70 line-clamp-2">{product.description}</p>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap">
               <div className="flex flex-col gap-1">
                 {product.discountPercentage > 0 ? (
                   <>
