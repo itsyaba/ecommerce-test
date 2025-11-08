@@ -3,16 +3,22 @@
 
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { Package, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import { FileText, Check, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchProductById, updateProduct, type UpdateProductData, type CreateProductData } from "@/lib/api";
+import {
+  fetchProductById,
+  updateProduct,
+  type UpdateProductData,
+  type CreateProductData,
+} from "@/lib/api";
 import type { Product } from "@/lib/features/products/productsSlice";
+import { cn } from "@/lib/utils";
 
 const PRODUCT_CATEGORIES = [
   "beauty",
@@ -41,13 +47,27 @@ const PRODUCT_CATEGORIES = [
   "womens-watches",
 ];
 
+const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const GENDERS = ["Men", "Woman", "Unisex"];
+
+const DISCOUNT_TYPES = [
+  "Chinese New Year Discount",
+  "Summer Sale",
+  "Winter Sale",
+  "Black Friday",
+  "Holiday Special",
+  "Clearance",
+];
+
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const productId = Number(params.id);
-  
+
   const [product, setProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState<CreateProductData>({
+  const [formData, setFormData] = useState<
+    CreateProductData & { sizes: string[]; genders: string[]; discountType: string }
+  >({
     title: "",
     description: "",
     price: 0,
@@ -55,23 +75,13 @@ export default function EditProductPage() {
     brand: "",
     category: "",
     discountPercentage: 0,
-    sku: "",
-    weight: 0,
-    dimensions: {
-      width: 0,
-      height: 0,
-      depth: 0,
-    },
-    tags: [],
-    warrantyInformation: "",
-    shippingInformation: "",
-    returnPolicy: "",
-    minimumOrderQuantity: 0,
-    thumbnail: "",
+    discountType: "",
+    sizes: [],
+    genders: [],
     images: [],
   });
-  const [tagsInput, setTagsInput] = useState("");
-  const [imagesInput, setImagesInput] = useState("");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
 
@@ -81,8 +91,7 @@ export default function EditProductPage() {
         setIsLoadingProduct(true);
         const productData = await fetchProductById(productId);
         setProduct(productData);
-        
-        // Pre-fill form with product data
+
         setFormData({
           title: productData.title || "",
           description: productData.description || "",
@@ -91,24 +100,15 @@ export default function EditProductPage() {
           brand: productData.brand || "",
           category: productData.category || "",
           discountPercentage: productData.discountPercentage || 0,
-          sku: productData.sku || "",
-          weight: productData.weight || 0,
-          dimensions: productData.dimensions || {
-            width: 0,
-            height: 0,
-            depth: 0,
-          },
-          tags: productData.tags || [],
-          warrantyInformation: productData.warrantyInformation || "",
-          shippingInformation: productData.shippingInformation || "",
-          returnPolicy: productData.returnPolicy || "",
-          minimumOrderQuantity: productData.minimumOrderQuantity || 0,
-          thumbnail: productData.thumbnail || "",
+          discountType: "",
+          sizes: [],
+          genders: [],
           images: productData.images || [],
         });
-        setTagsInput(productData.tags?.join(", ") || "");
-        setImagesInput(productData.images?.join(", ") || "");
+        setSelectedImages(productData.images || []);
+        setMainImageIndex(0);
       } catch (error: any) {
+        console.error(error);
         toast.error("Failed to load product");
         router.push("/");
       } finally {
@@ -125,49 +125,61 @@ export default function EditProductPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "price" || name === "stock" || name === "discountPercentage"
+          ? parseFloat(value) || 0
+          : value,
+    }));
+  };
 
-    if (name.startsWith("dimensions.")) {
-      const dimensionField = name.split(".")[1] as "width" | "height" | "depth";
+  const handleSizeToggle = (size: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizes: prev.sizes.includes(size)
+        ? prev.sizes.filter((s) => s !== size)
+        : [...prev.sizes, size],
+    }));
+  };
+
+  const handleGenderToggle = (gender: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      genders: prev.genders.includes(gender)
+        ? prev.genders.filter((g) => g !== gender)
+        : [...prev.genders, gender],
+    }));
+  };
+
+  const handleImageAdd = (url: string) => {
+    if (url.trim() && !selectedImages.includes(url.trim())) {
+      setSelectedImages([...selectedImages, url.trim()]);
       setFormData((prev) => ({
         ...prev,
-        dimensions: {
-          ...prev.dimensions!,
-          [dimensionField]: parseFloat(value) || 0,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]:
-          name === "price" ||
-          name === "stock" ||
-          name === "discountPercentage" ||
-          name === "weight" ||
-          name === "minimumOrderQuantity"
-            ? parseFloat(value) || 0
-            : value,
+        images: [...(prev.images || []), url.trim()],
       }));
     }
   };
 
-  const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTagsInput(value);
-    const tags = value
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-    setFormData((prev) => ({ ...prev, tags }));
+  const handleImageRemove = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    setFormData((prev) => ({
+      ...prev,
+      images: newImages,
+    }));
+    if (mainImageIndex >= newImages.length) {
+      setMainImageIndex(Math.max(0, newImages.length - 1));
+    }
   };
 
-  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setImagesInput(value);
-    const images = value
-      .split(",")
-      .map((img) => img.trim())
-      .filter((img) => img.length > 0);
-    setFormData((prev) => ({ ...prev, images }));
+  const handleSaveDraft = () => {
+    localStorage.setItem(
+      "productDraft",
+      JSON.stringify({ formData, selectedImages, mainImageIndex })
+    );
+    toast.success("Draft saved successfully!");
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -175,9 +187,8 @@ export default function EditProductPage() {
     setIsLoading(true);
 
     try {
-      // Validate required fields
       if (!formData.title.trim()) {
-        toast.error("Title is required");
+        toast.error("Product name is required");
         setIsLoading(false);
         return;
       }
@@ -196,72 +207,32 @@ export default function EditProductPage() {
         setIsLoading(false);
         return;
       }
-      if (!formData.brand.trim()) {
-        toast.error("Brand is required");
-        setIsLoading(false);
-        return;
-      }
       if (!formData.category) {
         toast.error("Category is required");
         setIsLoading(false);
         return;
       }
 
-      // Clean up form data - remove empty optional fields
       const cleanedData: UpdateProductData = {
         title: formData.title,
         description: formData.description,
         price: formData.price,
         stock: formData.stock,
-        brand: formData.brand,
+        brand: formData.brand || "Unknown",
         category: formData.category,
       };
 
-      // Add optional fields only if they have values
       if (formData.discountPercentage && formData.discountPercentage > 0) {
         cleanedData.discountPercentage = formData.discountPercentage;
       }
-      if (formData.sku && formData.sku.trim()) {
-        cleanedData.sku = formData.sku;
-      }
-      if (formData.weight && formData.weight > 0) {
-        cleanedData.weight = formData.weight;
-      }
-      if (
-        formData.dimensions &&
-        (formData.dimensions.width > 0 ||
-          formData.dimensions.height > 0 ||
-          formData.dimensions.depth > 0)
-      ) {
-        cleanedData.dimensions = formData.dimensions;
-      }
-      if (formData.tags && formData.tags.length > 0) {
-        cleanedData.tags = formData.tags;
-      }
-      if (formData.warrantyInformation && formData.warrantyInformation.trim()) {
-        cleanedData.warrantyInformation = formData.warrantyInformation;
-      }
-      if (formData.shippingInformation && formData.shippingInformation.trim()) {
-        cleanedData.shippingInformation = formData.shippingInformation;
-      }
-      if (formData.returnPolicy && formData.returnPolicy.trim()) {
-        cleanedData.returnPolicy = formData.returnPolicy;
-      }
-      if (formData.minimumOrderQuantity && formData.minimumOrderQuantity > 0) {
-        cleanedData.minimumOrderQuantity = formData.minimumOrderQuantity;
-      }
-      if (formData.thumbnail && formData.thumbnail.trim()) {
-        cleanedData.thumbnail = formData.thumbnail;
-      }
-      if (formData.images && formData.images.length > 0) {
-        cleanedData.images = formData.images;
+      if (selectedImages.length > 0) {
+        cleanedData.images = selectedImages;
+        cleanedData.thumbnail = selectedImages[0];
       }
 
       await updateProduct(productId, cleanedData);
+      toast.success("Product updated successfully!");
 
-      toast.success("Product updated successfully! (Note: This is a demo - changes are not persisted)");
-      
-      // Redirect back to product detail page
       setTimeout(() => {
         router.push(`/products/${productId}`);
         router.refresh();
@@ -279,542 +250,375 @@ export default function EditProductPage() {
 
   if (isLoadingProduct) {
     return (
-      <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-linear-to-b from-sky-50 to-white px-4 py-12 dark:from-sky-950/20 dark:to-background">
-        <Card className="relative z-10 w-full max-w-4xl border-0 bg-linear-to-b from-sky-50/80 via-white/90 to-white shadow-2xl backdrop-blur-sm dark:from-sky-950/30 dark:via-gray-900/90 dark:to-gray-900">
-          <CardHeader className="space-y-4">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="mx-auto h-10 w-10 rounded-md" />
-            <Skeleton className="mx-auto h-8 w-48" />
-            <Skeleton className="mx-auto h-4 w-64" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-6">
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-32 w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-32 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-linear-to-b from-sky-50 to-white px-4 py-12 dark:from-sky-950/20 dark:to-background">
-        <Card className="relative z-10 w-full max-w-4xl border-0 bg-linear-to-b from-sky-50/80 via-white/90 to-white shadow-2xl backdrop-blur-sm dark:from-sky-950/30 dark:via-gray-900/90 dark:to-gray-900">
-          <CardContent className="p-12 text-center">
-            <h2 className="text-2xl font-semibold">Product Not Found</h2>
-            <p className="mt-2 text-muted-foreground">The product you're trying to edit doesn't exist.</p>
-            <Link href="/">
-              <Button className="mt-6">Back to Home</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <h2 className="text-2xl font-semibold">Product Not Found</h2>
+              <p className="mt-2 text-muted-foreground">
+                The product you&apos;re trying to edit doesn&apos;t exist.
+              </p>
+              <Button className="mt-6" onClick={() => router.push("/")}>
+                Back to Home
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-linear-to-b from-sky-50 to-white px-4 py-12 dark:from-sky-950/20 dark:to-background">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -left-1/4 -top-1/4 h-96 w-96 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-900/20" />
-        <div className="absolute -right-1/4 -bottom-1/4 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20" />
-        {/* Subtle arcing lines pattern */}
-        <svg
-          className="absolute inset-0 h-full w-full opacity-20 dark:opacity-10"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M0,200 Q400,100 800,200 T1600,200"
-            stroke="#0ea5e9"
-            strokeWidth="1"
-            fill="none"
-            className="dark:text-sky-400"
-          />
-          <path
-            d="M0,400 Q400,300 800,400 T1600,400"
-            stroke="#3b82f6"
-            strokeWidth="1"
-            fill="none"
-            className="dark:text-blue-400"
-          />
-          <path
-            d="M0,600 Q400,500 800,600 T1600,600"
-            stroke="#7dd3fc"
-            strokeWidth="1"
-            fill="none"
-            className="dark:text-sky-300"
-          />
-        </svg>
-      </div>
-
-      <Card className="relative z-10 w-full max-w-4xl border-0 bg-linear-to-b from-sky-50/80 via-white/90 to-white shadow-2xl backdrop-blur-sm dark:from-sky-950/30 dark:via-gray-900/90 dark:to-gray-900">
-        <CardHeader className="space-y-4">
-          {/* Back button */}
-          <Link href={`/products/${productId}`}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Product</h1>
+          <div className="flex gap-3">
             <Button
-              variant="ghost"
-              size="sm"
-              className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
+              type="button"
+              variant="outline"
+              onClick={handleSaveDraft}
+              className="flex items-center gap-2"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Product
+              <FileText className="h-4 w-4" />
+              Save Draft
             </Button>
-          </Link>
-
-          {/* Icon */}
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-gray-100/80 dark:bg-gray-800/80">
-            <Package className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-          </div>
-          <CardTitle className="text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Edit Product
-          </CardTitle>
-          <CardDescription className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Update product information
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Title Field */}
-            <div className="space-y-2">
-              <label
-                htmlFor="title"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Title <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="title"
-                name="title"
-                type="text"
-                placeholder="Enter product title"
-                value={formData.title}
-                onChange={handleChange}
-                required
-                className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Description Field */}
-            <div className="space-y-2">
-              <label
-                htmlFor="description"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                placeholder="Enter product description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                rows={4}
-                className="flex w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800/50"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Price and Stock Row */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Price Field */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="price"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Price <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  placeholder="0.00"
-                  value={formData.price || ""}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Stock Field */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="stock"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Stock <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="stock"
-                  name="stock"
-                  type="number"
-                  placeholder="0"
-                  value={formData.stock || ""}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Brand Field */}
-            <div className="space-y-2">
-              <label
-                htmlFor="brand"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Brand <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="brand"
-                name="brand"
-                type="text"
-                placeholder="Enter brand name"
-                value={formData.brand}
-                onChange={handleChange}
-                required
-                className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Category Field */}
-            <div className="space-y-2">
-              <label
-                htmlFor="category"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                className="flex h-12 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800/50"
-                disabled={isLoading}
-              >
-                <option value="">Select a category</option>
-                {PRODUCT_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category
-                      .split("-")
-                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(" ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Divider */}
-            <div className="my-6 border-t border-gray-200 dark:border-gray-700"></div>
-
-            {/* Additional Information Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Additional Information
-              </h3>
-
-              {/* Discount Percentage and SKU Row */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="discountPercentage"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Discount Percentage (%)
-                  </label>
-                  <Input
-                    id="discountPercentage"
-                    name="discountPercentage"
-                    type="number"
-                    placeholder="0"
-                    value={formData.discountPercentage || ""}
-                    onChange={handleChange}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="sku"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    SKU
-                  </label>
-                  <Input
-                    id="sku"
-                    name="sku"
-                    type="text"
-                    placeholder="Enter SKU"
-                    value={formData.sku || ""}
-                    onChange={handleChange}
-                    className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              {/* Weight and Minimum Order Quantity Row */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="weight"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Weight (kg)
-                  </label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    placeholder="0"
-                    value={formData.weight || ""}
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="minimumOrderQuantity"
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Minimum Order Quantity
-                  </label>
-                  <Input
-                    id="minimumOrderQuantity"
-                    name="minimumOrderQuantity"
-                    type="number"
-                    placeholder="0"
-                    value={formData.minimumOrderQuantity || ""}
-                    onChange={handleChange}
-                    min="0"
-                    className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              {/* Dimensions */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Dimensions (cm)
-                </label>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="dimensions.width"
-                      className="text-xs text-gray-600 dark:text-gray-400"
-                    >
-                      Width
-                    </label>
-                    <Input
-                      id="dimensions.width"
-                      name="dimensions.width"
-                      type="number"
-                      placeholder="0"
-                      value={formData.dimensions?.width || ""}
-                      onChange={handleChange}
-                      min="0"
-                      step="0.01"
-                      className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="dimensions.height"
-                      className="text-xs text-gray-600 dark:text-gray-400"
-                    >
-                      Height
-                    </label>
-                    <Input
-                      id="dimensions.height"
-                      name="dimensions.height"
-                      type="number"
-                      placeholder="0"
-                      value={formData.dimensions?.height || ""}
-                      onChange={handleChange}
-                      min="0"
-                      step="0.01"
-                      className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="dimensions.depth"
-                      className="text-xs text-gray-600 dark:text-gray-400"
-                    >
-                      Depth
-                    </label>
-                    <Input
-                      id="dimensions.depth"
-                      name="dimensions.depth"
-                      type="number"
-                      placeholder="0"
-                      value={formData.dimensions?.depth || ""}
-                      onChange={handleChange}
-                      min="0"
-                      step="0.01"
-                      className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <label htmlFor="tags" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Tags
-                </label>
-                <Input
-                  id="tags"
-                  type="text"
-                  placeholder="Enter tags separated by commas (e.g., tag1, tag2, tag3)"
-                  value={tagsInput}
-                  onChange={handleTagsChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Separate multiple tags with commas
-                </p>
-              </div>
-
-              {/* Thumbnail */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="thumbnail"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Thumbnail URL
-                </label>
-                <Input
-                  id="thumbnail"
-                  name="thumbnail"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.thumbnail || ""}
-                  onChange={handleChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Images */}
-              <div className="space-y-2">
-                <label htmlFor="images" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Image URLs
-                </label>
-                <Input
-                  id="images"
-                  type="text"
-                  placeholder="Enter image URLs separated by commas"
-                  value={imagesInput}
-                  onChange={handleImagesChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Separate multiple image URLs with commas
-                </p>
-              </div>
-
-              {/* Warranty Information */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="warrantyInformation"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Warranty Information
-                </label>
-                <Input
-                  id="warrantyInformation"
-                  name="warrantyInformation"
-                  type="text"
-                  placeholder="e.g., 1 year warranty"
-                  value={formData.warrantyInformation || ""}
-                  onChange={handleChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Shipping Information */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="shippingInformation"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Shipping Information
-                </label>
-                <Input
-                  id="shippingInformation"
-                  name="shippingInformation"
-                  type="text"
-                  placeholder="e.g., Ships in 1-2 business days"
-                  value={formData.shippingInformation || ""}
-                  onChange={handleChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Return Policy */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="returnPolicy"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Return Policy
-                </label>
-                <Input
-                  id="returnPolicy"
-                  name="returnPolicy"
-                  type="text"
-                  placeholder="e.g., 30 days return policy"
-                  value={formData.returnPolicy || ""}
-                  onChange={handleChange}
-                  className="h-12 rounded-lg border-gray-200 bg-gray-50 px-4 text-base dark:border-gray-700 dark:bg-gray-800/50"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
             <Button
               type="submit"
-              className="mt-6 h-12 w-full rounded-lg bg-gray-900 text-base font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+              form="product-form"
               disabled={isLoading}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
+              <Check className="h-4 w-4" />
               {isLoading ? "Updating..." : "Update Product"}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+
+        <form id="product-form" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* General Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>General Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Name Product
+                    </label>
+                    <Input
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      placeholder="Puffer Jacket With Pocket Detail"
+                      required
+                      className="rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Description Product
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Enter product description..."
+                      required
+                      rows={5}
+                      className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Size
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Pick Available Size</p>
+                    <div className="flex flex-wrap gap-2">
+                      {SIZES.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => handleSizeToggle(size)}
+                          className={cn(
+                            "rounded-lg border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            formData.sizes.includes(size)
+                              ? "border-green-600 bg-green-600 text-white"
+                              : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                          )}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Gender
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Pick Available Gender
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {GENDERS.map((gender) => (
+                        <button
+                          key={gender}
+                          type="button"
+                          onClick={() => handleGenderToggle(gender)}
+                          className={cn(
+                            "rounded-lg border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            formData.genders.includes(gender)
+                              ? "border-green-600 bg-green-600 text-white"
+                              : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                          )}
+                        >
+                          {gender}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pricing And Stock */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pricing And Stock</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Base Pricing
+                    </label>
+                    <Input
+                      name="price"
+                      type="number"
+                      value={formData.price || ""}
+                      onChange={handleChange}
+                      placeholder="47.55"
+                      required
+                      min="0"
+                      step="0.01"
+                      className="rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Stock
+                    </label>
+                    <Input
+                      name="stock"
+                      type="number"
+                      value={formData.stock || ""}
+                      onChange={handleChange}
+                      placeholder="77"
+                      required
+                      min="0"
+                      className="rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Discount
+                    </label>
+                    <Input
+                      name="discountPercentage"
+                      type="number"
+                      value={formData.discountPercentage || ""}
+                      onChange={handleChange}
+                      placeholder="10"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Discount Type
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="discountType"
+                        value={formData.discountType}
+                        onChange={handleChange}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select discount type</option>
+                        {DISCOUNT_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Upload Img */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upload Img</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Main Image */}
+                  <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                    {selectedImages[mainImageIndex] ? (
+                      <Image
+                        src={selectedImages[mainImageIndex]}
+                        alt="Main product image"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-gray-400">
+                        No image selected
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Images */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {selectedImages.map((img, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border-2 transition-all",
+                          mainImageIndex === index
+                            ? "border-green-600"
+                            : "border-gray-200 dark:border-gray-700"
+                        )}
+                        onClick={() => setMainImageIndex(index)}
+                      >
+                        <Image
+                          src={img}
+                          alt={`Thumbnail ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 25vw, 12.5vw"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleImageRemove(index);
+                          }}
+                          className="absolute right-1 top-1 rounded-full bg-red-500 p-1 text-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {selectedImages.length < 4 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = prompt("Enter image URL:");
+                          if (url) handleImageAdd(url);
+                        }}
+                        className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-green-600 transition-colors hover:border-green-600 hover:bg-green-50 dark:border-gray-700 dark:bg-gray-800"
+                      >
+                        <Plus className="h-6 w-6" />
+                      </button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Category */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Category</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Product Category
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleChange}
+                        required
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select category</option>
+                        {PRODUCT_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>
+                            {category
+                              .split("-")
+                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                              .join(" ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                    onClick={() => {
+                      const newCategory = prompt("Enter new category name:");
+                      if (newCategory) {
+                        toast.info("Category management feature coming soon!");
+                      }
+                    }}
+                  >
+                    Add Category
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
-
