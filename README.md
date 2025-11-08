@@ -176,7 +176,7 @@ Secure authentication interface with modern design.
 1. **Clone the repository**
 
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/itsyaba/ecommerce-test.git
    cd test-project
    ```
 
@@ -456,14 +456,6 @@ Update `NEXT_PUBLIC_API_URL` in `.env.local` to use a different API endpoint.
 ### Components
 
 All UI components are from Shadcn UI and can be customized in `src/components/ui/`.
-
-## 🤝 Contributing
-
-This is a learning project, but contributions are welcome! Please feel free to:
-
-- Report bugs
-- Suggest features
-- Submit pull requests
 
 ## 📄 License
 
