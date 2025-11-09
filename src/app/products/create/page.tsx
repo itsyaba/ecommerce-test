@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createProduct, type CreateProductData } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAppDispatch } from "@/hooks/use-redux";
+import { resetProducts, fetchProducts } from "@/lib/features/products/productsSlice";
 
 const PRODUCT_CATEGORIES = [
   "beauty",
@@ -54,6 +56,7 @@ const DISCOUNT_TYPES = [
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [formData, setFormData] = useState<
     CreateProductData & { sizes: string[]; genders: string[]; discountType: string }
   >({
@@ -189,9 +192,14 @@ export default function CreateProductPage() {
       // Clear draft
       localStorage.removeItem("productDraft");
 
+      // Reset and refetch products to show the new product
+      dispatch(resetProducts());
+      dispatch(fetchProducts({ skip: 0, limit: 10 }));
+
       setTimeout(() => {
         router.push("/");
-      }, 2000);
+        router.refresh();
+      }, 1000);
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||

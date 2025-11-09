@@ -19,6 +19,8 @@ import {
 } from "@/lib/api";
 import type { Product } from "@/lib/features/products/productsSlice";
 import { cn } from "@/lib/utils";
+import { useAppDispatch } from "@/hooks/use-redux";
+import { resetProducts, fetchProducts } from "@/lib/features/products/productsSlice";
 
 const PRODUCT_CATEGORIES = [
   "beauty",
@@ -62,6 +64,7 @@ const DISCOUNT_TYPES = [
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
+  const dispatch = useAppDispatch();
   const productId = Number(params.id);
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -232,6 +235,10 @@ export default function EditProductPage() {
 
       await updateProduct(productId, cleanedData);
       toast.success("Product updated successfully!");
+
+      // Reset and refetch products to show the updated product
+      dispatch(resetProducts());
+      dispatch(fetchProducts({ skip: 0, limit: 10 }));
 
       setTimeout(() => {
         router.push(`/products/${productId}`);

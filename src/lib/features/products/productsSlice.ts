@@ -2,6 +2,11 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 import { api } from "@/lib/api";
 import { isAxiosError } from "axios";
+import {
+  mergeProductsWithLocalStorage,
+  getNewLocalProductsCount,
+  getDeletedProductsCount,
+} from "@/lib/storage/productsStorage";
 
 export type Product = {
   id: number;
@@ -79,7 +84,25 @@ export const fetchProducts = createAsyncThunk<
     const response = await api.get(url, { params });
     const { products, total } = response.data as FetchProductsResponse;
 
-    return { products, total };
+    // Always merge with localStorage changes to apply updates and filter deletions
+    // Include new local products only on the first page (skip === 0)
+    const isFirstPage = skip === 0;
+    const mergedProducts = mergeProductsWithLocalStorage(products, isFirstPage);
+
+    // Adjust total count to account for localStorage changes
+    let adjustedTotal = total;
+    if (isFirstPage) {
+      const apiProductIds = new Set(products.map((p) => p.id));
+      const newLocalCount = getNewLocalProductsCount(apiProductIds);
+      const deletedCount = getDeletedProductsCount(products);
+      adjustedTotal = total - deletedCount + newLocalCount;
+    } else {
+      // For subsequent pages, only account for deletions in this page
+      const deletedCount = getDeletedProductsCount(products);
+      adjustedTotal = total - deletedCount;
+    }
+
+    return { products: mergedProducts, total: Math.max(adjustedTotal, mergedProducts.length) };
   } catch (error) {
     if (isAxiosError(error)) {
       return thunkApi.rejectWithValue(error.message);

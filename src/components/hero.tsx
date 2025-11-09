@@ -88,7 +88,7 @@ export default function HeroSection() {
             New Season • 2025 Collection
           </span>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Your Comfort Zone Begins with Furnizen
+            Your Comfort Zone Begins with Furnizen.
           </h1>
           <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
             Discover the perfect blend of quality, comfort, and modern design. Furnizen hand-selects

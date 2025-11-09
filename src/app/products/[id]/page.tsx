@@ -48,6 +48,7 @@ import { fetchProductById, deleteProduct } from "@/lib/api";
 import type { Product } from "@/lib/features/products/productsSlice";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { resetProducts, fetchProducts } from "@/lib/features/products/productsSlice";
 
 const AVAILABLE_COLORS = [
   { name: "Beige", value: "#F5F5DC", hex: "bg-[#F5F5DC]" },
@@ -105,13 +106,18 @@ export default function ProductDetailPage() {
     setIsDeleting(true);
     try {
       await deleteProduct(productId);
-      toast.success("Product deleted successfully! (Note: This is a demo - product is not actually deleted)");
+      toast.success("Product deleted successfully!");
       setShowDeleteDialog(false);
+
+      // Reset and refetch products to remove the deleted product
+      dispatch(resetProducts());
+      dispatch(fetchProducts({ skip: 0, limit: 10 }));
+
       // Redirect to home after a short delay
       setTimeout(() => {
         router.push("/");
         router.refresh();
-      }, 1500);
+      }, 1000);
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -663,10 +669,6 @@ export default function ProductDetailPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will delete the product "{product?.title}".
-              <br />
-              <span className="mt-2 block text-xs text-muted-foreground">
-                Note: This is a demo - the product will not actually be deleted.
-              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
