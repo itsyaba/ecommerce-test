@@ -73,6 +73,29 @@ export default function ProductDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // cart helpers
+  const handleAddToCart = () => {
+    if (!product) return;
+    try {
+      // defer import to avoid SSR issues
+      const { addToCart } = require("@/lib/cart") as typeof import("@/lib/cart");
+      addToCart({
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        image: product.images?.[0] ?? null,
+        quantity,
+        color: selectedColor,
+        sku: product.sku ?? null,
+      });
+      toast.success("Added to cart");
+    } catch (err) {
+      // fallback local implementation if needed
+      toast.error("Failed to add to cart");
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     const loadProduct = async () => {
       try {
@@ -301,10 +324,10 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Quantity */}
+          {/* Quantity + Add to Cart */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Quantity</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
                 size="icon"
@@ -332,6 +355,14 @@ export default function ProductDetailPage() {
                 className="h-10 w-10"
               >
                 <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                size="lg"
+                className="ml-1"
+                disabled={product.stock === 0}
+                onClick={handleAddToCart}
+              >
+                Add to Cart
               </Button>
             </div>
           </div>

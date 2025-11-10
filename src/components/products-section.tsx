@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { fetchProducts, resetProducts, setSearchTerm } from "@/lib/features/products/productsSlice";
+import { Button } from "@/components/ui/button";
+import { fetchProducts, resetProducts, setSearchTerm, setSelectedCategory } from "@/lib/features/products/productsSlice";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 import { ProductCard } from "./product-card";
 import { ProductCardSkeleton } from "./product-card-skeleton";
@@ -14,18 +15,27 @@ const LIMIT = 10;
 
 export function ProductsSection() {
   const dispatch = useAppDispatch();
-  const { items, status, hasMore, skip, isLoadingMore, searchTerm, error } = useAppSelector(
+  const { items, status, hasMore, skip, isLoadingMore, searchTerm, selectedCategory, error } = useAppSelector(
     (state) => state.products
   );
 
   const [searchValue, setSearchValue] = useState(searchTerm);
+  const [categories, setCategories] = useState<string[]>([]);
   const observerRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetch('https://dummyjson.com/products/category-list')
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error('Failed to fetch categories:', err));
+  }, []);
 
   useEffect(() => {
     if (status === "idle") {
-      dispatch(fetchProducts({ skip: 0, limit: LIMIT, searchTerm }));
+      dispatch(fetchProducts({ skip: 0, limit: LIMIT, searchTerm, category: selectedCategory }));
     }
-  }, [dispatch, status, searchTerm]);
+  }, [dispatch, status, searchTerm, selectedCategory]);
 
   useEffect(() => {
     if (searchValue === searchTerm) {
@@ -35,11 +45,11 @@ export function ProductsSection() {
     const handler = setTimeout(() => {
       dispatch(setSearchTerm(searchValue));
       dispatch(resetProducts());
-      dispatch(fetchProducts({ skip: 0, limit: LIMIT, searchTerm: searchValue }));
+      dispatch(fetchProducts({ skip: 0, limit: LIMIT, searchTerm: searchValue, category: selectedCategory }));
     }, 400);
 
     return () => clearTimeout(handler);
-  }, [dispatch, searchValue, searchTerm]);
+  }, [dispatch, searchValue, searchTerm, selectedCategory]);
 
   useEffect(() => {
     const node = observerRef.current;
@@ -49,7 +59,7 @@ export function ProductsSection() {
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting && hasMore && !isLoadingMore && status !== "loading") {
-          dispatch(fetchProducts({ skip, limit: LIMIT, searchTerm }));
+          dispatch(fetchProducts({ skip, limit: LIMIT, searchTerm, category: selectedCategory }));
         }
       },
       {
@@ -60,7 +70,13 @@ export function ProductsSection() {
     observer.observe(node);
 
     return () => observer.disconnect();
-  }, [dispatch, hasMore, isLoadingMore, skip, status, searchTerm]);
+  }, [dispatch, hasMore, isLoadingMore, skip, status, searchTerm, selectedCategory]);
+
+  const handleCategoryChange = (category: string) => {
+    dispatch(setSelectedCategory(category));
+    dispatch(resetProducts());
+    dispatch(fetchProducts({ skip: 0, limit: LIMIT, searchTerm, category }));
+  };
 
   const showInitialSkeleton = status === "loading" && items.length === 0;
 
@@ -76,27 +92,53 @@ export function ProductsSection() {
 
   return (
     <section
-      id="collection"
+      id="products"
       className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8 xl:max-w-7xl"
     >
       <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Curated Collection
+            Featured Products
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Explore handcrafted pieces sourced from artisans across the globe.
+            Browse trending gadgets, fashion, and lifestyle essentials refreshed daily.
           </p>
         </div>
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search products"
+            placeholder="Search for sneakers, smart home, wellness..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="h-11 rounded-full border-border pl-10"
           />
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="mb-8">
+        <h3 className="mb-4 text-lg font-medium text-foreground">Categories</h3>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedCategory === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleCategoryChange("all")}
+            className="rounded-full"
+          >
+            All
+          </Button>
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleCategoryChange(category)}
+              className="rounded-full capitalize"
+            >
+              {category.replace(/-/g, " ")}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -123,7 +165,7 @@ export function ProductsSection() {
 
       {!hasMore && items.length > 0 && (
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          You&apos;ve reached the end of the collection.
+          You&apos;ve reached the end of today&apos;s picks.
         </p>
       )}
     </section>

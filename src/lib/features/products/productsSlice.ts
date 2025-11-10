@@ -56,6 +56,7 @@ type FetchProductsArgs = {
   limit?: number;
   searchTerm?: string;
   filters?: ProductFilters;
+  category?: string;
 };
 
 type FetchProductsResponse = {
@@ -67,7 +68,7 @@ export const fetchProducts = createAsyncThunk<
   FetchProductsResponse,
   FetchProductsArgs,
   { rejectValue: string }
->("products/fetchProducts", async ({ skip, limit = 10, searchTerm }, thunkApi) => {
+>("products/fetchProducts", async ({ skip, limit = 10, searchTerm, category }, thunkApi) => {
   try {
     const params: Record<string, string | number> = {
       limit,
@@ -76,7 +77,9 @@ export const fetchProducts = createAsyncThunk<
 
     let url = "/products";
 
-    if (searchTerm && searchTerm.trim().length > 0) {
+    if (category && category !== "all") {
+      url = `/products/category/${category}`;
+    } else if (searchTerm && searchTerm.trim().length > 0) {
       params.q = searchTerm.trim();
       url = "/products/search";
     }
@@ -84,12 +87,9 @@ export const fetchProducts = createAsyncThunk<
     const response = await api.get(url, { params });
     const { products, total } = response.data as FetchProductsResponse;
 
-    // Always merge with localStorage changes to apply updates and filter deletions
-    // Include new local products only on the first page (skip === 0)
     const isFirstPage = skip === 0;
     const mergedProducts = mergeProductsWithLocalStorage(products, isFirstPage);
 
-    // Adjust total count to account for localStorage changes
     let adjustedTotal = total;
     if (isFirstPage) {
       const apiProductIds = new Set(products.map((p) => p.id));
@@ -97,7 +97,6 @@ export const fetchProducts = createAsyncThunk<
       const deletedCount = getDeletedProductsCount(products);
       adjustedTotal = total - deletedCount + newLocalCount;
     } else {
-      // For subsequent pages, only account for deletions in this page
       const deletedCount = getDeletedProductsCount(products);
       adjustedTotal = total - deletedCount;
     }
@@ -123,6 +122,7 @@ type ProductsState = {
   searchTerm: string;
   isLoadingMore: boolean;
   filters: ProductFilters;
+  selectedCategory: string;
 };
 
 const initialState: ProductsState = {
@@ -136,6 +136,7 @@ const initialState: ProductsState = {
   searchTerm: "",
   isLoadingMore: false,
   filters: {},
+  selectedCategory: "all",
 };
 
 // Helper function to apply filters
@@ -186,6 +187,9 @@ const productsSlice = createSlice({
     },
     setSearchTerm(state, action: PayloadAction<string>) {
       state.searchTerm = action.payload;
+    },
+    setSelectedCategory(state, action: PayloadAction<string>) {
+      state.selectedCategory = action.payload;
     },
     setFilters(state, action: PayloadAction<ProductFilters>) {
       state.filters = action.payload;
@@ -248,7 +252,6 @@ const productsSlice = createSlice({
   },
 });
 
-export const { resetProducts, setSearchTerm, setFilters, clearFilters } = productsSlice.actions;
+export const { resetProducts, setSearchTerm, setSelectedCategory, setFilters, clearFilters } = productsSlice.actions;
 
 export default productsSlice.reducer;
-

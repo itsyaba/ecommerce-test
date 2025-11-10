@@ -3,12 +3,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Search, Heart, LogOut, Plus, User } from "lucide-react";
-import { useState, FormEvent, useEffect } from "react";
+import { Menu, Heart, LogOut, Plus, User, ShoppingCart } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -22,10 +21,10 @@ import { useAppSelector } from "@/hooks/use-redux";
 
 export function Navbar() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<any>(null);
   const favorites = useAppSelector((state) => state.favorites.items);
   const favoritesCount = Object.keys(favorites).length;
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -48,10 +47,29 @@ export function Navbar() {
     window.addEventListener("storage", checkAuth);
     const handleAuthChange = () => checkAuth();
     window.addEventListener("auth-change", handleAuthChange);
+    const updateCartCount = () => {
+      try {
+        const raw = localStorage.getItem("cart");
+        if (!raw) {
+          setCartCount(0);
+          return;
+        }
+        const items = JSON.parse(raw) as Record<string, { quantity: number }>;
+        const total = Object.values(items).reduce((sum, it) => sum + (it.quantity || 0), 0);
+        setCartCount(total);
+      } catch {
+        setCartCount(0);
+      }
+    };
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener("cart-change", updateCartCount);
 
     return () => {
       window.removeEventListener("storage", checkAuth);
       window.removeEventListener("auth-change", handleAuthChange);
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("cart-change", updateCartCount);
     };
   }, []);
 
@@ -67,15 +85,6 @@ export function Navbar() {
     router.refresh();
   };
 
-  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      router.push("/search");
-    }
-  };
-
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -86,22 +95,33 @@ export function Navbar() {
           <span className="text-lg font-semibold sm:text-xl">Furnizen</span>
         </Link>
 
-        <div className="flex flex-1 items-center justify-center gap-4 px-4">
-          <form onSubmit={handleSearch} className="hidden w-full max-w-md sm:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 rounded-full border-border pl-10 pr-4"
-              />
-            </div>
-          </form>
+        <div className="hidden md:flex items-center justify-center gap-6 px-4">
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Home
+          </Link>
+          <Link href="/#products" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Products
+          </Link>
+          <Link href="/favorites" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Favorites
+          </Link>
+          <Link href="/#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            About
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/cart">
+            <Button variant="ghost" size="icon" className="relative rounded-full mr-1">
+              <ShoppingCart className="h-5 w-5 text-foreground hover:text-primary" />
+              {cartCount > 0 && (
+                <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </Badge>
+              )}
+              <span className="sr-only">Cart</span>
+            </Button>
+          </Link>
           <Link href="/favorites">
             <Button variant="ghost" size="icon" className="relative rounded-full mr-3">
               <Heart className="h-5 w-5 text-foreground hover:fill-primary hover:text-primary" />
@@ -165,19 +185,28 @@ export function Navbar() {
                 <span className="text-lg font-semibold">Menu</span>
                 <ModeToggle />
               </div>
-              <form onSubmit={handleSearch} className="w-full">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 rounded-full border-border pl-10 pr-4"
-                  />
-                </div>
-              </form>
               <div className="flex flex-col gap-3">
+                <Link href="/cart">
+                  <Button variant="outline" className="w-full rounded-full" size="lg">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Cart
+                    {cartCount > 0 && (
+                      <Badge className="ml-2 h-5 min-w-[1.25rem] rounded-full px-1.5 text-xs">
+                        {cartCount > 99 ? "99+" : cartCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
+                <Link href="/" className="w-full">
+                  <Button variant="outline" className="w-full rounded-full" size="lg">
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/#products" className="w-full">
+                  <Button variant="outline" className="w-full rounded-full" size="lg">
+                    Products
+                  </Button>
+                </Link>
                 <Link href="/favorites">
                   <Button variant="outline" className="w-full rounded-full" size="lg">
                     <Heart className="mr-2 h-4 w-4 hover:fill-primary hover:text-primary" />
@@ -187,6 +216,11 @@ export function Navbar() {
                         {favoritesCount > 99 ? "99+" : favoritesCount}
                       </Badge>
                     )}
+                  </Button>
+                </Link>
+                <Link href="/#about" className="w-full">
+                  <Button variant="outline" className="w-full rounded-full" size="lg">
+                    About
                   </Button>
                 </Link>
                 {user ? (

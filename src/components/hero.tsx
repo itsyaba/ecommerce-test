@@ -2,39 +2,43 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Leaf, Package, Sparkles, Palette } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Package, Sparkles, Palette, Leaf, Search } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const features = [
   {
-    title: "Authentic Craftsmanship",
-    description: "Celebrate artisan furniture built to last generations.",
-    icon: Package,
-  },
-  {
-    title: "Personalized Styling",
-    description: "Design consultants tailor every room to your lifestyle.",
-    icon: Palette,
-  },
-  {
-    title: "Sustainable Materials",
-    description: "Eco-conscious woods and fabrics sourced responsibly.",
-    icon: Leaf,
-  },
-  {
-    title: "Innovative Comfort",
-    description: "Ergonomic silhouettes that blend form with function.",
+    title: "Verified Brands",
+    description: "Explore trusted labels and exclusive drops you won’t find elsewhere.",
     icon: Sparkles,
   },
+  {
+    title: "Curated Picks",
+    description: "Personalized recommendations across tech, fashion, and lifestyle.",
+    icon: Palette,
+  },
+  // {
+  //   title: "Sustainable Finds",
+  //   description: "Shop conscious products with transparent sourcing and impact.",
+  //   icon: Leaf,
+  // },
+  // {
+  //   title: "Fast Delivery",
+  //   description: "Nationwide fulfillment partners get orders to you in record time.",
+  //   icon: Package,
+  // },
 ];
 
 export default function HeroSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -71,6 +75,12 @@ export default function HeroSection() {
     },
   };
 
+  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    router.push(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+  };
+
   return (
     <section className="bg-background">
       <motion.div
@@ -85,18 +95,30 @@ export default function HeroSection() {
           className="flex max-w-2xl flex-col gap-6 lg:gap-8"
         >
           <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-            New Season • 2025 Collection
+            New Arrivals • 2025 Edit
           </span>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Your Comfort Zone Begins with Furnizen.
+            Everything You Love, Delivered Fast.
           </h1>
           <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Discover the perfect blend of quality, comfort, and modern design. Furnizen hand-selects
-            signature pieces that refresh every room and reflect your unique taste.
+            Discover a smarter way to shop. Furnizen hand-picks trending tech, elevated fashion, and
+            daily essentials.
           </p>
+          <form onSubmit={handleSearch} className="w-full">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+              <Input
+                type="search"
+                placeholder="Search gadgets, fashion, home essentials..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-12 rounded-full border-2 border-primary/30 bg-background/95 pl-12 pr-4 text-base shadow-lg shadow-primary/15 focus:border-primary focus-visible:ring-primary/40"
+              />
+            </div>
+          </form>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="h-12 rounded-full px-7 text-base">
-              <Link href="/collection">
+              <Link href="/#products">
                 Shop Now
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -133,7 +155,7 @@ export default function HeroSection() {
 
         <motion.div
           variants={imageVariants as Variants}
-          className="relative flex w-full flex-1 items-center justify-center h-[400px] sm:h-[500px] lg:h-full min-h-[400px]"
+          className="relative flex w-full flex-1 items-center justify-center h-[400px] sm:h-[500px] lg:h-10/12 min-h-[500px]"
         >
           <div className="relative w-full max-w-xl overflow-hidden rounded-[32px] bg-muted shadow-xl h-full">
             <div className="absolute inset-0 -z-10 bg-linear-to-b from-primary/10 to-secondary/30" />
@@ -141,7 +163,7 @@ export default function HeroSection() {
               src="https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Modern lounge chair with neutral textiles"
               width={960}
-              height={1600}
+              height={100}
               className="h-full w-full object-cover"
               priority
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
